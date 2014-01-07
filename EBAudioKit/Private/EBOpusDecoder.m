@@ -7,6 +7,8 @@
 //
 
 #import "EBOpusDecoder.h"
+#import "opusfile.h"
+#import "opus.h"
 
 @implementation EBOpusDecoder
 
