@@ -23,6 +23,8 @@
 		8BE3BB75187BFB1F004EB5B6 /* EBAudioDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 8BE3BB74187BFB1F004EB5B6 /* EBAudioDecoder.m */; };
 		8BE3BB78187D57C3004EB5B6 /* EBSeekableURLInputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = 8BE3BB77187D57C3004EB5B6 /* EBSeekableURLInputStream.m */; };
 		8BE3BB7B187D57E4004EB5B6 /* EBSeekableInputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = 8BE3BB7A187D57E4004EB5B6 /* EBSeekableInputStream.m */; };
+		8BE3BB80187E879E004EB5B6 /* TPCircularBuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 8BE3BB7C187E879E004EB5B6 /* TPCircularBuffer.c */; };
+		8BE3BB81187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.c in Sources */ = {isa = PBXBuildFile; fileRef = 8BE3BB7E187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +76,10 @@
 		8BE3BB77187D57C3004EB5B6 /* EBSeekableURLInputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EBSeekableURLInputStream.m; sourceTree = "<group>"; };
 		8BE3BB79187D57E4004EB5B6 /* EBSeekableInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBSeekableInputStream.h; sourceTree = "<group>"; };
 		8BE3BB7A187D57E4004EB5B6 /* EBSeekableInputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EBSeekableInputStream.m; sourceTree = "<group>"; };
+		8BE3BB7C187E879E004EB5B6 /* TPCircularBuffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = TPCircularBuffer.c; sourceTree = "<group>"; };
+		8BE3BB7D187E879E004EB5B6 /* TPCircularBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TPCircularBuffer.h; sourceTree = "<group>"; };
+		8BE3BB7E187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "TPCircularBuffer+AudioBufferList.c"; sourceTree = "<group>"; };
+		8BE3BB7F187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TPCircularBuffer+AudioBufferList.h"; sourceTree = "<group>"; };
 		BC84F5BF826A4831A6C95F1F /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -179,6 +185,10 @@
 				8BE3BB7A187D57E4004EB5B6 /* EBSeekableInputStream.m */,
 				8BE3BB76187D57C3004EB5B6 /* EBSeekableURLInputStream.h */,
 				8BE3BB77187D57C3004EB5B6 /* EBSeekableURLInputStream.m */,
+				8BE3BB7C187E879E004EB5B6 /* TPCircularBuffer.c */,
+				8BE3BB7D187E879E004EB5B6 /* TPCircularBuffer.h */,
+				8BE3BB7E187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.c */,
+				8BE3BB7F187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.h */,
 			);
 			path = Private;
 			sourceTree = "<group>";
@@ -318,9 +328,11 @@
 				8BE3BB78187D57C3004EB5B6 /* EBSeekableURLInputStream.m in Sources */,
 				8BE3BB7B187D57E4004EB5B6 /* EBSeekableInputStream.m in Sources */,
 				8BE3BB75187BFB1F004EB5B6 /* EBAudioDecoder.m in Sources */,
+				8BE3BB81187E879E004EB5B6 /* TPCircularBuffer+AudioBufferList.c in Sources */,
 				8BE3BB6F187BF666004EB5B6 /* EBAudioPlayer.m in Sources */,
 				8BE3BB6C187BF609004EB5B6 /* EBAudioPlayerItem.m in Sources */,
 				8BE3BB72187BFB08004EB5B6 /* EBOpusDecoder.m in Sources */,
+				8BE3BB80187E879E004EB5B6 /* TPCircularBuffer.c in Sources */,
 				8BE3BB69187BF5FD004EB5B6 /* EBAudioCache.m in Sources */,
 				8BE3BB25187BF38D004EB5B6 /* EBAudioKit.m in Sources */,
 			);
