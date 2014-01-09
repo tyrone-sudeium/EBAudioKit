@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.source_files = 'EBAudioKit/**/*.{h,m}'
   s.public_header_files = 'EBAudioKit/Public/*.h'
   s.requires_arc = true
-  s.frameworks = 'AudioToolbox'
+  s.frameworks = 'AudioToolbox', 'CoreMedia'
   s.dependency 'libopusfile-ios', '~> 0.4'
   s.dependency 'libopus-ios', '~> 1.1'
   s.dependency 'AFNetworking', '~> 2.0'

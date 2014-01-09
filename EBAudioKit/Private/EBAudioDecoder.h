@@ -9,5 +9,11 @@
 #import <Foundation/Foundation.h>
 
 @interface EBAudioDecoder : NSObject
+@property (nonatomic, readonly, strong) NSInputStream *inputStream;
+@property (nonatomic, readonly) NSOutputStream *outputStream;
+
++ (instancetype) decoderWithInputStream: (NSInputStream*) inputStream;
+
+- (BOOL) close;
 
 @end
