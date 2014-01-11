@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
-  s.name = "Streaming, caching, queueing, backgroundable, Opus-based audio player for iOS."
+  s.name = "EBAudioKit"
   s.version = "0.1"
-  s.summary = "Opusfile provides application developers with a high-level API for decoding and seeking in .opus files."
+  s.summary = "Streaming, caching, queueing, backgroundable, Opus-based audio player for iOS"
   s.homepage = "http://www.opus-codec.org"
   s.license = 'MIT'
   s.authors = { "Tyrone Trevorrow" => "tyrone@sudeium.com", "Xiph.org" => "opus@xiph.org"}
@@ -14,4 +14,5 @@ Pod::Spec.new do |s|
   s.dependency 'libopusfile-ios', '~> 0.4'
   s.dependency 'libopus-ios', '~> 1.1'
   s.dependency 'AFNetworking', '~> 2.0'
+  s.dependency 'TheAmazingAudioEngine', '~> 1.2'
 end

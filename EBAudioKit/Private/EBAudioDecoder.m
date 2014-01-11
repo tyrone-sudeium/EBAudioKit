@@ -14,6 +14,11 @@
 
 @implementation EBAudioDecoder
 
++ (uint64_t) initialBytes
+{
+    return 0;
+}
+
 - (id) initWithInputStream: (NSInputStream*) inputStream
 {
     self = [super init];
@@ -31,6 +36,11 @@
 - (BOOL) close
 {
     return NO;
+}
+
+- (uint64_t) writeIntoAudioBuffers: (AudioBufferList*) bufferList numberOfBytes: (NSUInteger) numBytes
+{
+    return 0;
 }
 
 @end
