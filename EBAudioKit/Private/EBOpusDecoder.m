@@ -110,6 +110,12 @@ static int decoder_close(void *stream)
 static void decode_cycle(void *context)
 {
     EBOpusDecoder *self = (__bridge EBOpusDecoder*) context;
+    
+//    if (self->_waitingForConsumer) {
+//        self->_waitingForConsumer = NO;
+//        printf("producing");
+//    }
+    
     // Opus likes 120ms increments, so we'll try to create buffers that big each cycle
     // 1 buffer, since Opus always outputs interleaved stereo PCM
     // Timestamp is nil, because we have no idea when this shit will be consumed.
@@ -123,12 +129,8 @@ static void decode_cycle(void *context)
         bufList = TPCircularBufferPrepareEmptyAudioBufferList(&(self->_circularBuffer), 1, 23040, NULL);
     }
     if (bufList) {
-        if (self->_waitingForConsumer) {
-            self->_waitingForConsumer = NO;
-            printf("producing");
-        } else {
-            printf(".");
-        }
+//        printf(".");
+        
         ogg_int64_t offset = op_pcm_tell(self.opusFile);
         int samplesRead = op_read_stereo(self.opusFile, bufList->mBuffers[0].mData, bufList->mBuffers[0].mDataByteSize / sizeof(opus_int16));
         if (samplesRead > 0) {
@@ -149,20 +151,20 @@ static void decode_cycle(void *context)
         }
         dispatch_async_f(self->_decodeQueue, context, decode_cycle);
     } else {
-        if (!self->_waitingForConsumer) {
-            self->_waitingForConsumer = YES;
-            printf("\nwaiting for consumer...\n");
-            
-            // Give the audio player some time to consume the buffers, yielding the CPU.
-            
-            // We delay using GCD instead of sleep so that it's possible to inject some other
-            // work into this GCD queue while it's waiting. This is a means of thread-safety,
-            // i.e If we wanted to add a "stop" flag which will prevent further decoding, we
-            // could queue up the setting of this flag in a block on this queue, which would
-            // ensure that there's no way this flag is getting written to at the same time
-            // decode_cycle is running.
-            dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, 0.1*NSEC_PER_SEC), self->_decodeQueue, context, decode_cycle);
-        }
+//        if (!self->_waitingForConsumer) {
+//            self->_waitingForConsumer = YES;
+//            printf("\nwaiting for consumer...\n");
+//        }
+        
+        // Give the audio player some time to consume the buffers, yielding the CPU.
+        
+        // We delay using GCD instead of sleep so that it's possible to inject some other
+        // work into this GCD queue while it's waiting. This is a means of thread-safety,
+        // i.e If we wanted to add a "stop" flag which will prevent further decoding, we
+        // could queue up the setting of this flag in a block on this queue, which would
+        // ensure that there's no way this flag is getting written to at the same time
+        // decode_cycle is running.
+        dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, 0.1*NSEC_PER_SEC), self->_decodeQueue, context, decode_cycle);
     }
 }
 
