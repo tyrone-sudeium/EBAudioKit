@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4FAB7D04A08E44F095730354 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BC84F5BF826A4831A6C95F1F /* libPods.a */; };
+		8B3C3D9218839CA900F202DB /* EBCacheTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8B3C3D9118839CA900F202DB /* EBCacheTests.m */; };
 		8BE3BAFC187BF1DC004EB5B6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BE3BAFB187BF1DC004EB5B6 /* Foundation.framework */; };
 		8BE3BB0A187BF1DC004EB5B6 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BE3BB09187BF1DC004EB5B6 /* XCTest.framework */; };
 		8BE3BB0B187BF1DC004EB5B6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BE3BAFB187BF1DC004EB5B6 /* Foundation.framework */; };
@@ -49,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		7BCEE8530DC34CF1AAAE50E0 /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
+		8B3C3D9118839CA900F202DB /* EBCacheTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EBCacheTests.m; sourceTree = "<group>"; };
 		8BE3BAF8187BF1DC004EB5B6 /* libEBAudioKit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libEBAudioKit.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE3BAFB187BF1DC004EB5B6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		8BE3BAFF187BF1DC004EB5B6 /* EBAudioKit-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EBAudioKit-Prefix.pch"; sourceTree = "<group>"; };
@@ -154,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				8BE3BB17187BF1DC004EB5B6 /* EBAudioKitTests.m */,
+				8B3C3D9118839CA900F202DB /* EBCacheTests.m */,
 				8BE3BB12187BF1DC004EB5B6 /* Supporting Files */,
 			);
 			path = EBAudioKitTests;
@@ -331,6 +334,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8BE3BB18187BF1DC004EB5B6 /* EBAudioKitTests.m in Sources */,
+				8B3C3D9218839CA900F202DB /* EBCacheTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -464,8 +468,8 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "EBAudioKit/EBAudioKit-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
 					"$(inherited)",
+					"TEST_WEB_DIR=$(PROJECT_DIR)/EBAudioKitTests/web",
 				);
 				INFOPLIST_FILE = "EBAudioKitTests/EBAudioKitTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -484,6 +488,10 @@
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "EBAudioKit/EBAudioKit-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"TEST_WEB_DIR=$(PROJECT_DIR)/EBAudioKitTests/web",
+				);
 				INFOPLIST_FILE = "EBAudioKitTests/EBAudioKitTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = xctest;

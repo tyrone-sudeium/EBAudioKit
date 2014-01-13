@@ -33,7 +33,7 @@ DEPENDENCIES:
 SPEC CHECKSUMS:
   AFNetworking: e499052cbf3d743e9bb727bb37adb9dc2547ba15
   libogg-ios: d6177b0ce87f9224198e35168c07702202ca798a
-  libopus-ios: 11e464ad781b2218b19d1010e1c85176e2f607ec
+  libopus-ios: abf5b75f4262ab35de04a0d6c6f60905b0c65a60
   libopusfile-ios: 2c6f06921effccb7a516ae3d19eba695c5e06097
   TheAmazingAudioEngine: e544f61ab180d6e83c9478cc47355420f61d7281
 
