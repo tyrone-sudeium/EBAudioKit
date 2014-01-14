@@ -8,6 +8,20 @@
 
 #import <Foundation/Foundation.h>
 
+@interface EBAudioCachedItem : NSObject <NSCoding>
+@property (nonatomic, copy) NSString *key;
+@property (nonatomic, readonly) NSIndexSet *cachedIndexes;
+@end
+
 @interface EBAudioCache : NSObject
+@property (nonatomic, strong) NSURL *cacheURL;
+
+// The default cache lives at <sandbox>/Library/Caches/com.sudeium.EBAudioKit.EBAudioCache/
++ (instancetype) defaultCache;
++ (void) setDefaultCache: (EBAudioCache*) defaultCache;
+
+- (EBAudioCachedItem*) cachedItemForKey: (NSString*) key;
+
+- (void) synchronize;
 
 @end

@@ -8,8 +8,14 @@
 
 #import "EBSeekableInputStream.h"
 
+@class EBAudioCachedItem;
+
+@interface EBSeekableURLOperation : NSOperation
+@property (nonatomic, strong) NSURLRequest *request;
+@property (nonatomic, strong) EBAudioCachedItem *cacheItem;
+@end
+
 @interface EBSeekableURLInputStream : NSInputStream
-
-
+@property (nonatomic, strong) EBAudioCachedItem *cacheItem;
 
 @end
