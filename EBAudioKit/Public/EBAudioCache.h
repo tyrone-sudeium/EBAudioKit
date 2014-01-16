@@ -10,7 +10,12 @@
 
 @interface EBAudioCachedItem : NSObject <NSCoding>
 @property (nonatomic, copy) NSString *key;
+@property (nonatomic, assign) uint64_t byteSize;
 @property (nonatomic, readonly) NSIndexSet *cachedIndexes;
+
+- (void) cacheData: (NSData*) data representingRangeInFile: (NSRange) range;
+- (void) close;
+
 @end
 
 @interface EBAudioCache : NSObject
@@ -20,7 +25,11 @@
 + (instancetype) defaultCache;
 + (void) setDefaultCache: (EBAudioCache*) defaultCache;
 
+- (NSURL*) cachePathForKey: (NSString*) key;
+
 - (EBAudioCachedItem*) cachedItemForKey: (NSString*) key;
+- (void) cacheItem: (EBAudioCachedItem*) item forKey: (NSString*) key;
+
 
 - (void) synchronize;
 

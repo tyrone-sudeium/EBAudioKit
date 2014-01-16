@@ -24,6 +24,71 @@
 #import "EBSeekableURLInputStream.h"
 #import "EBAudioCache.h"
 
+@interface EBSeekableURLOperation () <NSURLConnectionDataDelegate> {
+    BOOL _finished;
+}
+@property (nonatomic, strong) NSURLConnection *connection;
+@end
+
+@implementation EBSeekableURLOperation
+
+- (void) start
+{
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL: [NSURL URLWithString: self.URLString] cachePolicy: NSURLRequestReloadIgnoringCacheData timeoutInterval: 10];
+    if (self.downloadRange.length > 0) {
+        NSString *httpRange = [NSString stringWithFormat: @"%i-%i", self.downloadRange.location, self.downloadRange.location + self.downloadRange.length];
+        [request setValue: httpRange forHTTPHeaderField: @"Range"];
+    }
+    self.connection = [[NSURLConnection alloc] initWithRequest: request delegate: self];
+    [self.connection start];
+}
+
+- (void) cancel
+{
+    [self.connection cancel];
+    [self finish];
+}
+
+- (void) finish
+{
+    [self willChangeValueForKey: @"isFinished"];
+    _finished = YES;
+    [self didChangeValueForKey: @"isFinished"];
+    
+}
+
+- (BOOL) isFinished
+{
+    return _finished;
+}
+
+- (BOOL) isConcurrent
+{
+    return YES;
+}
+
+- (BOOL) isExecuting
+{
+    return !_finished;
+}
+
+- (void) connectionDidFinishLoading:(NSURLConnection *)connection
+{
+    [self finish];
+}
+
+- (void) connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
+{
+    self.cacheItem.byteSize = response.expectedContentLength;
+}
+
+- (void) connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+{
+    
+}
+
+@end
+
 @implementation EBSeekableURLInputStream
 
 @end

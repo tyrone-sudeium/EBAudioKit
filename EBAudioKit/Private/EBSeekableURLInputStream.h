@@ -11,7 +11,8 @@
 @class EBAudioCachedItem;
 
 @interface EBSeekableURLOperation : NSOperation
-@property (nonatomic, strong) NSURLRequest *request;
+@property (nonatomic, assign) NSRange downloadRange;
+@property (nonatomic, copy) NSString *URLString;
 @property (nonatomic, strong) EBAudioCachedItem *cacheItem;
 @end
 
