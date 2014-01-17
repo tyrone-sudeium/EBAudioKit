@@ -218,6 +218,11 @@ __strong static EBAudioCache *_defaultCache = nil;
     return [[self cacheURL] URLByAppendingPathComponent: filename];
 }
 
+- (NSURL*) cacheItemFilePathForKey: (NSString*) key
+{
+    return [[self cachePathForKey: key] URLByAppendingPathExtension: @"plist"];
+}
+
 - (void) setCacheURL:(NSURL *)cacheURL
 {
     [self willChangeValueForKey: @"cacheURL"];
@@ -234,7 +239,7 @@ __strong static EBAudioCache *_defaultCache = nil;
         return item;
     } else {
         // Try to load it from disk
-        NSURL *path = [self cachePathForKey: key];
+        NSURL *path = [self cacheItemFilePathForKey: key];
         item = [NSKeyedUnarchiver unarchiveObjectWithFile: path.absoluteString];
         if (item == nil) {
             // Just make a new one.
@@ -268,7 +273,7 @@ __strong static EBAudioCache *_defaultCache = nil;
 
 - (void) _synchronizeCacheItem: (EBAudioCachedItem*) item
 {
-    [NSKeyedArchiver archiveRootObject: item toFile: [self cachePathForKey: item.key].absoluteString];
+    [NSKeyedArchiver archiveRootObject: item toFile: [self cacheItemFilePathForKey: item.key].absoluteString];
 }
 
 #pragma mark - Cache Delegate
