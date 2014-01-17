@@ -62,6 +62,7 @@ static dispatch_queue_t GetSharedWriteQueue() {
         if (self.indexSet == nil) {
             self.indexSet = [NSMutableIndexSet new];
         }
+        self.fileURL = [aDecoder decodeObjectOfClass: [NSURL class] forKey: @"fileURL"];
         _memoryType = EBMemoryTypeInvalid;
     }
     return self;
@@ -70,6 +71,7 @@ static dispatch_queue_t GetSharedWriteQueue() {
 - (void) encodeWithCoder:(NSCoder *)aCoder
 {
     [aCoder encodeObject: self.indexSet forKey: @"indexSet"];
+    [aCoder encodeObject: self.fileURL forKey: @"fileURL"];
 }
 
 - (NSIndexSet*) cachedIndexes
@@ -245,6 +247,8 @@ __strong static EBAudioCache *_defaultCache = nil;
             // Just make a new one.
             item = [EBAudioCachedItem new];
             item.key = key;
+            item.fileURL = [self cachePathForKey: key];
+            [self cacheItem: item forKey: key];
         }
     }
     return item;
@@ -254,6 +258,11 @@ __strong static EBAudioCache *_defaultCache = nil;
 {
     [self.cacheItems setObject: item forKey: key];
     [self.cacheKeys addObject: key];
+}
+
+- (BOOL) hasItemForKey:(NSString *)key
+{
+    return [self.cacheKeys containsObject: key];
 }
 
 - (void) synchronize
@@ -274,6 +283,12 @@ __strong static EBAudioCache *_defaultCache = nil;
 - (void) _synchronizeCacheItem: (EBAudioCachedItem*) item
 {
     [NSKeyedArchiver archiveRootObject: item toFile: [self cacheItemFilePathForKey: item.key].absoluteString];
+}
+
+- (void) cleanup
+{
+    // Janitorial stuff. iOS can randomly delete stuff out of caches, so we occasionally
+    // need to kick out stuff that isn't around any more.
 }
 
 #pragma mark - Cache Delegate

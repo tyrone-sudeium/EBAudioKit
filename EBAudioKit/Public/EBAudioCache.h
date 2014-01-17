@@ -27,10 +27,12 @@
 
 - (NSURL*) cachePathForKey: (NSString*) key;
 
+// Returns a new cached item if it doesn't exist
 - (EBAudioCachedItem*) cachedItemForKey: (NSString*) key;
-- (void) cacheItem: (EBAudioCachedItem*) item forKey: (NSString*) key;
 
+- (BOOL) hasItemForKey: (NSString*) key;
 
 - (void) synchronize;
+- (void) cleanup;
 
 @end
