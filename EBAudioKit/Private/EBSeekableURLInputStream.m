@@ -26,6 +26,7 @@
 
 @interface EBSeekableURLOperation () <NSURLConnectionDataDelegate> {
     BOOL _finished;
+    NSInteger _byteOffset;
 }
 @property (nonatomic, strong) NSURLConnection *connection;
 @end
@@ -84,11 +85,39 @@
 
 - (void) connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-    
+    [self.cacheItem cacheData: data representingRangeInFile: NSMakeRange(self.downloadRange.location + _byteOffset, data.length)];
+    _byteOffset += data.length;
 }
 
 @end
 
-@implementation EBSeekableURLInputStream
+@interface EBSeekableURLInputStream ()
+@property (assign) BOOL cancelRead;
+@end
+
+@implementation EBSeekableURLInputStream {
+    NSUInteger _pos;
+}
+
+
+- (NSInteger) read:(uint8_t *)buffer maxLength:(NSUInteger)len
+{
+    // Like all other input streams, this one should block(!) the caller until
+    // the data is actually available.
+    
+    // Block for a while
+    [[NSRunLoop currentRunLoop] runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.05]];
+    if (self.cancelRead) {
+        return 0;
+    }
+    
+    return 0;
+}
+
+- (void) seekToOffset:(NSUInteger)offset
+{
+    _pos = offset;
+    self.cancelRead = YES;
+}
 
 @end

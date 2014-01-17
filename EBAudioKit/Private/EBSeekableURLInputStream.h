@@ -19,4 +19,6 @@
 @interface EBSeekableURLInputStream : NSInputStream
 @property (nonatomic, strong) EBAudioCachedItem *cacheItem;
 
+- (void) seekToOffset: (NSUInteger) offset;
+
 @end

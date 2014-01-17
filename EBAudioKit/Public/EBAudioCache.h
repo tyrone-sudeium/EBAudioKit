@@ -13,6 +13,7 @@
 @property (nonatomic, assign) uint64_t byteSize;
 @property (nonatomic, readonly) NSIndexSet *cachedIndexes;
 
+// You definitely don't want to call this before setting byteSize.
 - (void) cacheData: (NSData*) data representingRangeInFile: (NSRange) range;
 - (void) close;
 
