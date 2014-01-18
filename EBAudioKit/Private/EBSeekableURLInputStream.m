@@ -35,6 +35,7 @@
     NSInteger _byteOffset;
 }
 @property (nonatomic, strong) NSURLConnection *connection;
+@property (nonatomic, weak) id<EBURLOperationDelegate> delegate;
 @end
 
 @implementation EBURLOperation
@@ -81,6 +82,7 @@
 
 - (void) connectionDidFinishLoading:(NSURLConnection *)connection
 {
+    [self.delegate URLOperationDidFinish: self];
     [self finish];
 }
 
@@ -96,6 +98,13 @@
 {
     [self.cacheItem cacheData: data representingRangeInFile: NSMakeRange(self.downloadRange.location + _byteOffset, data.length)];
     _byteOffset += data.length;
+    [self.delegate URLOperationDidUpdateCache: self];
+}
+
+- (void) connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
+{
+    [self.delegate URLOperation: self failedWithError: error];
+    [self finish];
 }
 
 @end
@@ -142,6 +151,7 @@
         } else {
             self.currentOperation.downloadRange = [self nextDownloadRange];
         }
+        [self.currentOperation start];
     }
 }
 
@@ -197,17 +207,19 @@
 
 - (void) URLOperationDidFinish: (EBURLOperation*) operation
 {
-    
+    // Start another worker if there are still unfinished chunks left in the file
+    [self startDownloadWorker];
 }
 
 - (void) URLOperationDidUpdateCache: (EBURLOperation*) operation
 {
-    
+    // I don't think we actually need this!
 }
 
 - (void) URLOperation: (EBURLOperation*) operation failedWithError: (NSError*) error
 {
-    
+    self.cancelRead = YES;
+    NSLog(@"%@", error.localizedDescription);
 }
 
 @end
