@@ -12,10 +12,16 @@
 @property (nonatomic, copy) NSString *key;
 @property (nonatomic, assign) uint64_t byteSize;
 @property (nonatomic, readonly) NSIndexSet *cachedIndexes;
+// By default, we set this to key when you set key.
+@property (nonatomic, copy) NSString *remoteURL;
 
 // You definitely don't want to call this before setting byteSize.
 - (void) cacheData: (NSData*) data representingRangeInFile: (NSRange) range;
 - (void) close;
+
+// You definitely don't want to call this unless you're sure these bytes are available.
+// You definitely don't want to call this after you've called close.
+- (const uint8_t*) getBytesLength: (NSUInteger) maxLen fromOffset: (NSUInteger) offset;
 
 @end
 

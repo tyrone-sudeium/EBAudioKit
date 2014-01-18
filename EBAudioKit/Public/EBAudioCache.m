@@ -62,7 +62,6 @@ static dispatch_queue_t GetSharedWriteQueue() {
         if (self.indexSet == nil) {
             self.indexSet = [NSMutableIndexSet new];
         }
-        self.fileURL = [aDecoder decodeObjectOfClass: [NSURL class] forKey: @"fileURL"];
         _memoryType = EBMemoryTypeInvalid;
     }
     return self;
@@ -70,8 +69,17 @@ static dispatch_queue_t GetSharedWriteQueue() {
 
 - (void) encodeWithCoder:(NSCoder *)aCoder
 {
+    // We should minimise as much as possible how much meta-crap we store on disk.
+    // I'd like to keep it under 4k.
     [aCoder encodeObject: self.indexSet forKey: @"indexSet"];
-    [aCoder encodeObject: self.fileURL forKey: @"fileURL"];
+}
+
+- (void) setKey:(NSString *)key
+{
+    [self willChangeValueForKey: @"key"];
+    _key = key.copy;
+    _remoteURL = _key;
+    [self didChangeValueForKey: @"key"];
 }
 
 - (NSIndexSet*) cachedIndexes
@@ -125,6 +133,15 @@ static dispatch_queue_t GetSharedWriteQueue() {
             memcpy(_bytes + range.location, data.bytes, data.length);
         }
     });
+}
+
+- (const uint8_t*) getBytesLength: (NSUInteger) maxLen fromOffset: (NSUInteger) offset
+{
+    if (offset + maxLen > self.byteSize) {
+        [NSException raise: NSRangeException format: @"Index out of bounds reading %lu bytes offset %lu in a %llu buffer", (unsigned long)maxLen, (unsigned long)offset, self.byteSize];
+        return NULL;
+    }
+    return _bytes + offset;
 }
 
 - (void) close
@@ -238,6 +255,8 @@ __strong static EBAudioCache *_defaultCache = nil;
 {
     EBAudioCachedItem *item = [self.cacheItems objectForKey: key];
     if (item) {
+        item.key = key;
+        item.fileURL = [self cachePathForKey: key];
         return item;
     } else {
         // Try to load it from disk
