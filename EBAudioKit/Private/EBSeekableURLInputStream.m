@@ -196,6 +196,7 @@
     if (read != NULL) {
         memcpy(buffer, read, safeLen);
     }
+    _pos += safeLen;
     return safeLen;
 }
 
