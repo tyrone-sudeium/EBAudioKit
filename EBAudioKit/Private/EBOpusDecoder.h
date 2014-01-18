@@ -8,8 +8,8 @@
 
 #import <Foundation/Foundation.h>
 #import "EBAudioDecoder.h"
-#import "TheAmazingAudioEngine.h"
 
-@interface EBOpusDecoder : EBAudioDecoder <AEAudioPlayable>
+
+@interface EBOpusDecoder : EBAudioDecoder
 
 @end

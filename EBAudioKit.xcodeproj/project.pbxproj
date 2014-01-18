@@ -50,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		7BCEE8530DC34CF1AAAE50E0 /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
+		8B1FD161188A3D3500FF71D4 /* EBAudioPlayerItem+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EBAudioPlayerItem+Private.h"; sourceTree = "<group>"; };
 		8B3C3D9118839CA900F202DB /* EBCacheTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EBCacheTests.m; sourceTree = "<group>"; };
 		8BE3BAF8187BF1DC004EB5B6 /* libEBAudioKit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libEBAudioKit.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE3BAFB187BF1DC004EB5B6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -182,6 +183,7 @@
 				8BE3BB7A187D57E4004EB5B6 /* EBSeekableInputStream.m */,
 				8BE3BB76187D57C3004EB5B6 /* EBSeekableURLInputStream.h */,
 				8BE3BB77187D57C3004EB5B6 /* EBSeekableURLInputStream.m */,
+				8B1FD161188A3D3500FF71D4 /* EBAudioPlayerItem+Private.h */,
 			);
 			path = Private;
 			sourceTree = "<group>";

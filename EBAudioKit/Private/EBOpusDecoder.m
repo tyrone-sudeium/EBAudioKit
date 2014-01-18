@@ -7,6 +7,7 @@
 //
 
 #import "EBOpusDecoder.h"
+#import "EBSeekableURLInputStream.h"
 #import "TPCircularBuffer+AudioBufferList.h"
 #import "opusfile.h"
 #import "opus.h"
@@ -22,6 +23,7 @@ static const int kAudioBufferLength = 230400;
     dispatch_queue_t _decodeQueue;
     AudioStreamBasicDescription _audioDescription;
     BOOL _waitingForConsumer;
+    BOOL _stop;
 }
 @property (nonatomic, assign) OggOpusFile *opusFile;
 @property (nonatomic, strong) NSArray *leftOvers;
@@ -97,19 +99,33 @@ static int decoder_close(void *stream)
 - (void) start
 {
     [self.inputStream open];
-    NSMutableData *initialBytes = [NSMutableData dataWithCapacity: (NSUInteger)[[self class] initialBytes]];
-    NSInteger read = [self.inputStream read: initialBytes.mutableBytes maxLength: (NSUInteger)[[self class] initialBytes]];
-    _pos = read;
-    static const OpusFileCallbacks callbacks = { decoder_read, decoder_seek, decoder_tell, decoder_close };
-    int error = 0;
-    self.opusFile = op_open_callbacks((__bridge void *)(self), &callbacks, initialBytes.bytes, read, &error);
-    
-    dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
+    dispatch_async(_decodeQueue, ^{
+        NSMutableData *initialBytes = [NSMutableData dataWithCapacity: (NSUInteger)[[self class] initialBytes]];
+        NSInteger read = [self.inputStream read: initialBytes.mutableBytes maxLength: (NSUInteger)[[self class] initialBytes]];
+        _pos = read;
+        static const OpusFileCallbacks callbacks = { decoder_read, decoder_seek, decoder_tell, decoder_close };
+        int error = 0;
+        self.opusFile = op_open_callbacks((__bridge void *)(self), &callbacks, initialBytes.bytes, read, &error);
+        
+        dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
+    });
 }
 
 static void decode_cycle(void *context)
 {
+    // We can't manually retain these context objects, so we'll have to retain them some
+    // other way!
+    static NSMutableSet *retainedDecoders = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        retainedDecoders = [NSMutableSet new];
+    });
     EBOpusDecoder *self = (__bridge EBOpusDecoder*) context;
+    [retainedDecoders removeObject: self];
+    
+    if (self.opusFile == NULL || self->_stop) {
+        return;
+    }
     
 //    if (self->_waitingForConsumer) {
 //        self->_waitingForConsumer = NO;
@@ -149,7 +165,10 @@ static void decode_cycle(void *context)
                 return;
             }
         }
-        dispatch_async_f(self->_decodeQueue, context, decode_cycle);
+        if (!self->_stop) {
+            [retainedDecoders addObject: self];
+            dispatch_async_f(self->_decodeQueue, context, decode_cycle);
+        }
     } else {
 //        if (!self->_waitingForConsumer) {
 //            self->_waitingForConsumer = YES;
@@ -164,7 +183,10 @@ static void decode_cycle(void *context)
         // could queue up the setting of this flag in a block on this queue, which would
         // ensure that there's no way this flag is getting written to at the same time
         // decode_cycle is running.
-        dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, 0.1*NSEC_PER_SEC), self->_decodeQueue, context, decode_cycle);
+        if (!self->_stop) {
+            [retainedDecoders addObject: self];
+            dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, 0.1*NSEC_PER_SEC), self->_decodeQueue, context, decode_cycle);
+        }
     }
 }
 
@@ -187,11 +209,16 @@ static void decode_cycle(void *context)
 
 - (BOOL) close
 {
-    [self.inputStream close];
+    [(EBSeekableURLInputStream*) self.inputStream prepareToClose];
+    dispatch_sync(_decodeQueue, ^{
+        self.opusFile = NULL;
+        [self.inputStream close];
+        self->_stop = YES;
+    });
     if (_timer) {
         dispatch_source_cancel(_timer);
     }
-    return NO; // unimplemented
+    return YES;
 }
 
 static OSStatus renderCallback(id                        channel,

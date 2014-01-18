@@ -44,7 +44,7 @@
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL: [NSURL URLWithString: self.URLString] cachePolicy: NSURLRequestReloadIgnoringCacheData timeoutInterval: 10];
     if (self.downloadRange.length > 0) {
-        NSString *httpRange = [NSString stringWithFormat: @"%i-%i", self.downloadRange.location, self.downloadRange.location + self.downloadRange.length];
+        NSString *httpRange = [NSString stringWithFormat: @"%lu-%lu", (unsigned long)self.downloadRange.location, (unsigned long)self.downloadRange.location + self.downloadRange.length];
         [request setValue: httpRange forHTTPHeaderField: @"Range"];
     }
     self.connection = [[NSURLConnection alloc] initWithRequest: request delegate: self];
@@ -176,6 +176,41 @@
     }
 }
 
+- (void) open
+{
+    // In the absence of something more constructive to do here, we'll just start
+    // a worker if we need one.
+    [self startDownloadWorker];
+}
+
+- (void) prepareToClose
+{
+    self.cancelRead = YES;
+}
+
+- (void) close
+{
+    // Close the cache item and kill any pending workers
+    [self.currentOperation cancel];
+    self.currentOperation = nil;
+    [self.cacheItem close];
+}
+
+- (BOOL) getBuffer:(uint8_t **)buffer length:(NSUInteger *)len
+{
+    // TODO
+    return NO;
+}
+
+- (BOOL) hasBytesAvailable
+{
+    if (self.cacheItem.byteSize == 0) {
+        return YES; // Probably...
+    }
+    NSUInteger len = 1;
+    return [self canFulfilReadRequest: &len];
+}
+
 - (NSInteger) read:(uint8_t *)buffer maxLength:(NSUInteger)len
 {
     // Like all other input streams, this one should block(!) the caller until
@@ -185,10 +220,12 @@
     NSUInteger safeLen = len; // safeLen should never overflow
     self.blockingThread = [NSThread currentThread];
     while (![self canFulfilReadRequest: &safeLen]) {
-        // Block for a while
-        [[NSRunLoop currentRunLoop] runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
-        if (self.cancelRead) {
-            return 0;
+        @autoreleasepool {
+            // Block for a while
+            usleep(100);
+            if (self.cancelRead) {
+                return 0;
+            }
         }
     }
     

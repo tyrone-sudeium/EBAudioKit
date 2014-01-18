@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import "TheAmazingAudioEngine.h"
 
-@interface EBAudioDecoder : NSObject
+@interface EBAudioDecoder : NSObject <AEAudioPlayable>
 @property (nonatomic, readonly, strong) NSInputStream *inputStream;
 @property (nonatomic, readonly) AudioStreamBasicDescription audioDescription;
 
@@ -22,7 +23,5 @@
 
 - (void) start;
 - (BOOL) close;
-
-- (BOOL) writeIntoAudioBuffers: (AudioBufferList*) bufferList numberOfFrames: (NSUInteger) frames audioTimeStamp: (const AudioTimeStamp*) timeStamp;
 
 @end

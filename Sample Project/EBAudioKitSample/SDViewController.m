@@ -10,7 +10,8 @@
 #import "EBAudioPlayerItem.h"
 #import "EBAudioPlayer.h"
 
-@interface SDViewController ()
+@interface SDViewController () <UITextFieldDelegate>
+@property (strong, nonatomic) IBOutlet UITextField *textField;
 @property (nonatomic, strong) EBAudioPlayer *player;
 @end
 
@@ -20,9 +21,9 @@
 {
     [super viewDidLoad];
     self.player = [[EBAudioPlayer alloc] init];
-    NSURL *url = [[NSBundle mainBundle] URLForResource: @"EBAudioKitSample" withExtension:@"opus"];
-    self.player.playbackQueue = @[ [EBAudioPlayerItem playerItemWithURL: url] ];
 	// Do any additional setup after loading the view, typically from a nib.
+    
+    self.textField.text = @"https://eqbeats.org/track/5699/opus";
 }
 
 - (void)didReceiveMemoryWarning
@@ -33,7 +34,20 @@
 
 - (IBAction)buttonAction:(id)sender
 {
+    NSURL *url = [[NSBundle mainBundle] URLForResource: @"EBAudioKitSample" withExtension:@"opus"];
+    self.player.playbackQueue = @[ [EBAudioPlayerItem playerItemWithURL: url] ];
     [self.player play];
+}
+
+- (IBAction)remotePlayAction:(id)sender
+{
+    self.player.playbackQueue = @[ [EBAudioPlayerItem playerItemWithURL: [NSURL URLWithString:self.textField.text]] ];
+    [self.player play];
+}
+
+- (BOOL) textFieldShouldReturn:(UITextField *)textField
+{
+    return [textField resignFirstResponder];
 }
 
 @end

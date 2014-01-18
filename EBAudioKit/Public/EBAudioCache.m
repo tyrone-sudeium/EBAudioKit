@@ -19,10 +19,19 @@ typedef NS_ENUM(NSInteger, EBMemoryType) {
 @interface EBAudioCachedItem () {
     EBMemoryType _memoryType;
     uint8_t *_bytes;
+@public
+    EBAudioCache *_cache;
 }
 @property (nonatomic, strong) NSMutableIndexSet *indexSet;
 @property (nonatomic, strong) NSURL *fileURL;
 
+@end
+
+@interface EBAudioCache () <NSCacheDelegate>
+@property (nonatomic, strong) NSCache *cacheItems;
+@property (nonatomic, strong) NSMutableSet *cacheKeys; // NSCache doesn't have an accessor for this :|
+@property (nonatomic, strong) dispatch_queue_t synchronizeQueue;
+- (void) _synchronizeCacheItem: (EBAudioCachedItem*) item;
 @end
 
 @implementation EBAudioCachedItem
@@ -93,12 +102,12 @@ static dispatch_queue_t GetSharedWriteQueue() {
         uint64_t fileLen = 0;
         // If the file doesn't exist, create it...
         NSFileManager *fm = [NSFileManager new];
-        BOOL fileExists = [fm fileExistsAtPath: self.fileURL.absoluteString];
+        BOOL fileExists = [fm fileExistsAtPath: self.fileURL.path];
         if (fileExists) {
-            NSDictionary *d = [fm attributesOfItemAtPath: self.fileURL.absoluteString error: nil];
+            NSDictionary *d = [fm attributesOfItemAtPath: self.fileURL.path error: nil];
             fileLen = [d fileSize];
         }
-        int fd = open(self.fileURL.absoluteString.UTF8String, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        int fd = open(self.fileURL.path.UTF8String, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (!fileExists || fileLen != self.byteSize) {
             if (fileLen != self.byteSize) {
                 // If the sizes differ, blow away the old file
@@ -132,11 +141,13 @@ static dispatch_queue_t GetSharedWriteQueue() {
         if (_bytes) {
             memcpy(_bytes + range.location, data.bytes, data.length);
         }
+        [self.indexSet addIndexesInRange: range];
     });
 }
 
 - (const uint8_t*) getBytesLength: (NSUInteger) maxLen fromOffset: (NSUInteger) offset
 {
+    [self setupMemoryBlock];
     if (offset + maxLen > self.byteSize) {
         [NSException raise: NSRangeException format: @"Index out of bounds reading %lu bytes offset %lu in a %llu buffer", (unsigned long)maxLen, (unsigned long)offset, self.byteSize];
         return NULL;
@@ -153,6 +164,7 @@ static dispatch_queue_t GetSharedWriteQueue() {
     }
     _memoryType = EBMemoryTypeInvalid;
     _bytes = NULL;
+    [_cache _synchronizeCacheItem: self];
 }
 
 - (void) dealloc
@@ -160,12 +172,6 @@ static dispatch_queue_t GetSharedWriteQueue() {
     [self close];
 }
 
-@end
-
-@interface EBAudioCache () <NSCacheDelegate>
-@property (nonatomic, strong) NSCache *cacheItems;
-@property (nonatomic, strong) NSMutableSet *cacheKeys; // NSCache doesn't have an accessor for this :|
-@property (nonatomic, strong) dispatch_queue_t synchronizeQueue;
 @end
 
 @implementation EBAudioCache

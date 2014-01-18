@@ -20,5 +20,6 @@
 @property (nonatomic, strong) EBAudioCachedItem *cacheItem;
 
 - (void) seekToOffset: (NSUInteger) offset;
+- (void) prepareToClose;
 
 @end
