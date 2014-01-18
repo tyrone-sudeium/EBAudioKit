@@ -139,6 +139,11 @@
 
 - (void) startDownloadWorker
 {
+    if (self.currentOperation != nil) {
+        // Don't interrupt an in-progress worker.
+        return;
+    }
+    
     // If we don't know how big the file is (we've never done a single GET) or we haven't finished caching the
     // entire file yet...
     if (self.cacheItem.byteSize == 0 || ![self.cacheItem.cachedIndexes containsIndexesInRange: NSMakeRange(0, (NSUInteger) self.cacheItem.byteSize)]) {
@@ -199,6 +204,7 @@
     _pos = offset;
     self.cancelRead = YES;
     [self.currentOperation cancel];
+    self.currentOperation = nil;
     [self startDownloadWorker];
 }
 
@@ -208,6 +214,7 @@
 - (void) URLOperationDidFinish: (EBURLOperation*) operation
 {
     // Start another worker if there are still unfinished chunks left in the file
+    self.currentOperation = nil;
     [self startDownloadWorker];
 }
 
@@ -220,6 +227,8 @@
 {
     self.cancelRead = YES;
     NSLog(@"%@", error.localizedDescription);
+    
+    // TODO: Propagate the error
 }
 
 @end
