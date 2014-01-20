@@ -20,12 +20,12 @@ useful functionality but with a very narrow focus. It will not replace
 [VLCKit](https://wiki.videolan.org/VLCKit/)
 or AVFoundation. Required features for 1.0 include:
 
-- `[ ]` HTTP and HTTPS streaming.
-- `[ ]` Streaming .opus files and playing back Opus-encoded content.
+- `[x]` HTTP and HTTPS streaming.
+- `[x]` Streaming .opus files and playing back Opus-encoded content.
 - `[ ]` Automatically switching to a local file if there is one.
 - `[ ]` Seeking.
 - `[ ]` Player item queueing (like `AVQueuePlayer`, except not shit).
-- `[ ]` Robust track caching, including partial cache.
+- `[x]` Robust track caching, including partial cache.
 - `[ ]` Track caching must be manageable by the API consumer.
 
 Things I would like to include:
