@@ -33,14 +33,26 @@
     return [[self alloc] initWithInputStream: inputStream];
 }
 
+- (void) start
+{
+    // Override in subclasses
+}
+
 - (BOOL) close
 {
+    // Override in subclasses
     return NO;
 }
 
 - (uint64_t) writeIntoAudioBuffers: (AudioBufferList*) bufferList numberOfBytes: (NSUInteger) numBytes
 {
+    // Override in subclasses
     return 0;
+}
+
+- (AEAudioControllerRenderCallback) renderCallback
+{
+    return NULL;
 }
 
 @end

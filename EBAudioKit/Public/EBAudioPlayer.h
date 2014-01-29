@@ -10,10 +10,22 @@
 #import <CoreMedia/CoreMedia.h>
 
 @class EBAudioPlayerItem;
+@class EBAudioPlayer;
+@protocol EBAudioPlayerDelegate <NSObject>
+// Fires whenever current item changes, current item duration changes,
+// playback state changes.
+- (void) audioPlayerStatusChanged: (EBAudioPlayer*) player;
+// While the player is currently playing, this method will fire every
+// positionUpdateInterval seconds.
+- (void) audioPlayerPositionChanged: (EBAudioPlayer*) player;
+@end
 
 @interface EBAudioPlayer : NSObject
 @property (nonatomic, copy) NSArray *playbackQueue;
 @property (nonatomic, readonly) EBAudioPlayerItem *currentItem;
+@property (nonatomic, readonly) NSUInteger positionInQueue;
+// Defaults to 1/30 - 30 times per second.
+@property (nonatomic, assign) NSTimeInterval positionUpdateInterval;
 
 - (void) play;
 - (void) pause;
@@ -21,5 +33,6 @@
 - (void) skipNext;
 - (void) skipPrevious;
 - (void) seekTo: (CMTime) seekTime;
+- (void) skipTo: (NSUInteger) index;
 
 @end

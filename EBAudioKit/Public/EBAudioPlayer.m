@@ -17,12 +17,13 @@
 #import "opusfile.h"
 #import "opus.h"
 
-@interface EBAudioPlayer () {
+@interface EBAudioPlayer () <EBAudioDecoderDelegate> {
     BOOL _preparedToPlay;
     NSUInteger _positionInQueue;
+    CMTime _previousPos;
 }
 @property (nonatomic, strong) AEAudioController *audioController;
-@property (nonatomic, strong) EBOpusDecoder *decoder;
+@property (nonatomic, strong) NSTimer *positionTimer;
 @end
 
 @implementation EBAudioPlayer
@@ -42,6 +43,8 @@
         audioDescription.mBitsPerChannel    = 16;
         audioDescription.mSampleRate        = 48000.0;
         self.audioController = [[AEAudioController alloc] initWithAudioDescription: audioDescription];
+        
+        self.positionUpdateInterval = 1.0/30.0;
     }
     return self;
 }
@@ -49,6 +52,22 @@
 - (EBAudioPlayerItem*) currentItem
 {
     return self.playbackQueue[_positionInQueue];
+}
+
+- (NSUInteger) positionInQueue
+{
+    return _positionInQueue;
+}
+
+- (void) setPositionUpdateInterval:(NSTimeInterval)positionUpdateInterval
+{
+    [self willChangeValueForKey: @"positionUpdateInterval"];
+    _positionUpdateInterval = positionUpdateInterval;
+    [self didChangeValueForKey: @"positionUpdateInterval"];
+    if (self.positionTimer) {
+        [self.positionTimer invalidate];
+    }
+    self.positionTimer = [NSTimer scheduledTimerWithTimeInterval: _positionUpdateInterval target: self selector: @selector(_positionTimerTick) userInfo:nil repeats: YES];
 }
 
 - (void) setPlaybackQueue:(NSArray *)playbackQueue
@@ -63,8 +82,7 @@
 - (void) prepareToPlay
 {
     if (!_preparedToPlay) {
-        [self.audioController addChannels: @[ self.currentItem.audioDecoder ]];
-        [self.currentItem.audioDecoder start];
+        [self skipTo: 0];
         _preparedToPlay = YES;
     }
 }
@@ -95,17 +113,58 @@
 
 - (void) skipNext
 {
-    
+    if (_positionInQueue == self.playbackQueue.count) {
+        [self stop];
+    } else {
+        // TODO: Gapless?
+        [self skipTo: _positionInQueue + 1];
+    }
 }
 
 - (void) skipPrevious
 {
-    
+    if (_positionInQueue == 0 && self.currentItem != nil && self.playbackQueue.count > 0) {
+        [self seekTo: kCMTimeZero];
+    } else {
+        [self skipTo: _positionInQueue - 1];
+    }
 }
 
 - (void) seekTo: (CMTime) seekTime
 {
     
+}
+
+- (void) skipTo:(NSUInteger)index
+{
+    EBAudioPlayerItem *previousItem = self.currentItem;
+    _positionInQueue = index;
+    
+    if (_preparedToPlay) {
+        // Add the new item and start it
+        // We do this before removing the old one so iOS has no chance to suspend us
+        // if we're in the background
+        [self.audioController addChannels: @[ self.currentItem.audioDecoder ]];
+        [self.currentItem.audioDecoder start];
+        
+        if (previousItem) {
+            [previousItem.audioDecoder close];
+            [self.audioController removeChannels: @[ previousItem.audioDecoder ]];
+            previousItem.audioDecoder = nil;
+            previousItem.inputStream = nil;
+        }
+    }
+}
+
+- (void) _positionTimerTick
+{
+    _previousPos = self.currentItem.position;
+}
+
+- (void) audioDecoderClosed:(EBAudioDecoder *)decoder
+{
+    // TODO: Gapless?
+    [self skipNext];
 }
 
 @end

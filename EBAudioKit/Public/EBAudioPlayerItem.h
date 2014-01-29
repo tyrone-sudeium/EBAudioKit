@@ -19,6 +19,7 @@ typedef NS_ENUM(NSInteger, EBAudioPlayerItemStatus) {
 @property (nonatomic, readonly, strong) NSURL *URL;
 @property (nonatomic, readonly) CMTime duration;
 @property (nonatomic, readonly) EBAudioPlayerItemStatus status;
+@property (nonatomic, readonly) CMTime position;
 
 + (instancetype) playerItemWithURL: (NSURL*) aURL;
 - (id) initWithURL: (NSURL*) aURL;

@@ -9,7 +9,11 @@
 #import <Foundation/Foundation.h>
 
 @class EBSeekableURLInputStream;
-
+@class EBAudioPlayerItem;
+@protocol EBAudioPlayerItemDelegate <NSObject>
+- (void) playerItemDidReachEnd: (EBAudioPlayerItem*) playerItem;
+- (void) playerItemDurationChanged: (EBAudioPlayerItem*) playerItem;
+@end
 @interface EBAudioPlayerItem ()
 @property (nonatomic, strong) EBSeekableURLInputStream *inputStream;
 @property (nonatomic, strong) EBAudioDecoder *audioDecoder;

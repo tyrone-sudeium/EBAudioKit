@@ -24,6 +24,15 @@ static const int kAudioBufferLength = 230400;
     AudioStreamBasicDescription _audioDescription;
     BOOL _waitingForConsumer;
     BOOL _stop;
+    BOOL _channelIsPlaying;
+    
+    BOOL _atEndOfStream;
+    BOOL _atEndOfAudioBuffer;
+    
+    UInt64 _lengthInFrames;
+    SInt64 _playhead;
+    
+    
 }
 @property (nonatomic, assign) OggOpusFile *opusFile;
 @property (nonatomic, strong) NSArray *leftOvers;
@@ -99,6 +108,7 @@ static int decoder_close(void *stream)
 - (void) start
 {
     [self.inputStream open];
+    _playhead = 0;
     dispatch_async(_decodeQueue, ^{
         NSMutableData *initialBytes = [NSMutableData dataWithCapacity: (NSUInteger)[[self class] initialBytes]];
         NSInteger read = [self.inputStream read: initialBytes.mutableBytes maxLength: (NSUInteger)[[self class] initialBytes]];
@@ -106,31 +116,31 @@ static int decoder_close(void *stream)
         static const OpusFileCallbacks callbacks = { decoder_read, decoder_seek, decoder_tell, decoder_close };
         int error = 0;
         self.opusFile = op_open_callbacks((__bridge void *)(self), &callbacks, initialBytes.bytes, read, &error);
-        
-        dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
+        if (self.opusFile && error == 0) {
+            dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
+            _channelIsPlaying = YES;
+        } else {
+            // Can't play this
+        }
     });
+}
+
+static NSCountedSet* retainedDecoders = NULL;
+__attribute__((constructor)) static void setupRetainedDecoders()
+{
+    // Alas, ARC doesn't allow us to retain self. This is a ghetto workaround to
+    // ensure decoders are properly retained while messages are queued.
+    retainedDecoders = [NSCountedSet new];
 }
 
 static void decode_cycle(void *context)
 {
-    // We can't manually retain these context objects, so we'll have to retain them some
-    // other way!
-    static NSMutableSet *retainedDecoders = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        retainedDecoders = [NSMutableSet new];
-    });
     EBOpusDecoder *self = (__bridge EBOpusDecoder*) context;
     [retainedDecoders removeObject: self];
     
     if (self.opusFile == NULL || self->_stop) {
         return;
     }
-    
-//    if (self->_waitingForConsumer) {
-//        self->_waitingForConsumer = NO;
-//        printf("producing");
-//    }
     
     // Opus likes 120ms increments, so we'll try to create buffers that big each cycle
     // 1 buffer, since Opus always outputs interleaved stereo PCM
@@ -145,8 +155,6 @@ static void decode_cycle(void *context)
         bufList = TPCircularBufferPrepareEmptyAudioBufferList(&(self->_circularBuffer), 1, 23040, NULL);
     }
     if (bufList) {
-//        printf(".");
-        
         ogg_int64_t offset = op_pcm_tell(self.opusFile);
         int samplesRead = op_read_stereo(self.opusFile, bufList->mBuffers[0].mData, bufList->mBuffers[0].mDataByteSize / sizeof(opus_int16));
         if (samplesRead > 0) {
@@ -154,12 +162,10 @@ static void decode_cycle(void *context)
             ts.mSampleTime = offset;
             TPCircularBufferCopyAudioBufferList(&(self->_circularBuffer), bufList, &ts, samplesRead, &self->_audioDescription);
         } else if (samplesRead == 0) {
-            printf("end of stream...\n");
             [self close];
             return;
         } else {
             // Opus error
-            printf("opus error: %i\n", samplesRead);
             if (samplesRead != OP_HOLE) {
                 [self close];
                 return;
@@ -170,11 +176,6 @@ static void decode_cycle(void *context)
             dispatch_async_f(self->_decodeQueue, context, decode_cycle);
         }
     } else {
-//        if (!self->_waitingForConsumer) {
-//            self->_waitingForConsumer = YES;
-//            printf("\nwaiting for consumer...\n");
-//        }
-        
         // Give the audio player some time to consume the buffers, yielding the CPU.
         
         // We delay using GCD instead of sleep so that it's possible to inject some other
@@ -209,6 +210,10 @@ static void decode_cycle(void *context)
 
 - (BOOL) close
 {
+    _atEndOfStream = YES;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self checkIfAtEndOfFile];
+    });
     [(EBSeekableURLInputStream*) self.inputStream prepareToClose];
     dispatch_sync(_decodeQueue, ^{
         self.opusFile = NULL;
@@ -221,6 +226,23 @@ static void decode_cycle(void *context)
     return YES;
 }
 
+- (void) checkIfAtEndOfFile
+{
+    if (self.delegate && _atEndOfStream && _atEndOfAudioBuffer) {
+        [self.delegate audioDecoderClosed: self];
+    }
+}
+
+static void notifyPlaybackStopped(AEAudioController *audioController, void *userInfo, int length)
+{
+    // TODO: Memory management
+    EBOpusDecoder *self = (__bridge EBOpusDecoder*) userInfo;
+    self->_atEndOfAudioBuffer = YES;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self checkIfAtEndOfFile];
+    });
+}
+
 static OSStatus renderCallback(id                        channel,
                                AEAudioController        *audioController,
                                const AudioTimeStamp     *time,
@@ -229,11 +251,33 @@ static OSStatus renderCallback(id                        channel,
     // This is on the realtime Core Audio thread. Don't do any Objective-C, mallocs
     // or locks here.
     EBOpusDecoder *self = (EBOpusDecoder*)channel;
+    
+    SInt64 playhead = self->_playhead;
+    SInt64 originalPlayhead = playhead;
+    
+    if (!self->_channelIsPlaying) return noErr;
+    
+    if (self->_lengthInFrames > 0 && playhead >= self->_lengthInFrames) {
+        // Notify main thread that playback has finished
+        AEAudioControllerSendAsynchronousMessageToMainThread(audioController, notifyPlaybackStopped, &self, sizeof(EBOpusDecoder*));
+        self->_channelIsPlaying = NO;
+        return noErr;
+    }
+    
     TPCircularBufferDequeueBufferListFrames(&self->_circularBuffer,
                                             &frames,
                                             audio,
                                             NULL,
                                             &self->_audioDescription);
+    
+    playhead += frames;
+    if (self->_lengthInFrames > 0 && playhead >= self->_lengthInFrames) {
+        // Notify main thread that playback has finished
+        AEAudioControllerSendAsynchronousMessageToMainThread(audioController, notifyPlaybackStopped, &self, sizeof(EBOpusDecoder*));
+        self->_channelIsPlaying = NO;
+    }
+    
+    OSAtomicCompareAndSwap64(originalPlayhead, playhead, &self->_playhead);
     return noErr;
 }
 
