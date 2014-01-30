@@ -10,4 +10,9 @@
 
 @implementation EBSeekableInputStream
 
+- (void) seekToOffset:(uint64_t)offset
+{
+    // implement in subclasses
+}
+
 @end

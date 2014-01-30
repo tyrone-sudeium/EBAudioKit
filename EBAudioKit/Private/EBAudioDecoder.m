@@ -38,6 +38,11 @@
     // Override in subclasses
 }
 
+- (void) pause
+{
+    // Override in subclasses
+}
+
 - (BOOL) close
 {
     // Override in subclasses
@@ -53,6 +58,16 @@
 - (AEAudioControllerRenderCallback) renderCallback
 {
     return NULL;
+}
+
+- (int64_t) position
+{
+    return 0;
+}
+
+- (uint64_t) duration
+{
+    return 0;
 }
 
 @end

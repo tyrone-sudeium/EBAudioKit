@@ -22,10 +22,12 @@
 
 @interface EBAudioPlayer : NSObject
 @property (nonatomic, copy) NSArray *playbackQueue;
+@property (nonatomic, weak) id<EBAudioPlayerDelegate> delegate;
 @property (nonatomic, readonly) EBAudioPlayerItem *currentItem;
 @property (nonatomic, readonly) NSUInteger positionInQueue;
 // Defaults to 1/30 - 30 times per second.
 @property (nonatomic, assign) NSTimeInterval positionUpdateInterval;
+@property (nonatomic, readonly, getter = isPlaying) BOOL playing;
 
 - (void) play;
 - (void) pause;

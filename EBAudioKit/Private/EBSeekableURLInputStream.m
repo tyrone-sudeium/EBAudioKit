@@ -44,7 +44,7 @@
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL: [NSURL URLWithString: self.URLString] cachePolicy: NSURLRequestReloadIgnoringCacheData timeoutInterval: 10];
     if (self.downloadRange.length > 0) {
-        NSString *httpRange = [NSString stringWithFormat: @"%lu-%lu", (unsigned long)self.downloadRange.location, (unsigned long)self.downloadRange.location + self.downloadRange.length];
+        NSString *httpRange = [NSString stringWithFormat: @"bytes=%lu-%lu", (unsigned long)self.downloadRange.location, (unsigned long)self.downloadRange.location + self.downloadRange.length];
         [request setValue: httpRange forHTTPHeaderField: @"Range"];
     }
     self.connection = [[NSURLConnection alloc] initWithRequest: request delegate: self];
@@ -54,6 +54,7 @@
 - (void) cancel
 {
     [self.connection cancel];
+    self.connection = nil;
     [self finish];
 }
 
@@ -96,7 +97,9 @@
 
 - (void) connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-    [self.cacheItem cacheData: data representingRangeInFile: NSMakeRange(self.downloadRange.location + _byteOffset, data.length)];
+    NSRange range = NSMakeRange(self.downloadRange.location + _byteOffset, data.length);
+    [self.cacheItem cacheData: data representingRangeInFile: range];
+    printf("caching range %s\n", NSStringFromRange(range).UTF8String);
     _byteOffset += data.length;
     [self.delegate URLOperationDidUpdateCache: self];
 }
@@ -109,10 +112,12 @@
 
 @end
 
-@interface EBSeekableURLInputStream () <EBURLOperationDelegate>
+@interface EBSeekableURLInputStream () <EBURLOperationDelegate> {
+    BOOL _reading;
+}
 @property (assign) BOOL cancelRead;
 @property (nonatomic, strong) EBURLOperation *currentOperation;
-@property (nonatomic, strong) NSThread *blockingThread;
+@property (nonatomic, strong) dispatch_queue_t blockingQueue;
 @end
 
 @implementation EBSeekableURLInputStream {
@@ -139,25 +144,36 @@
 
 - (void) startDownloadWorker
 {
-    if (self.currentOperation != nil) {
-        // Don't interrupt an in-progress worker.
-        return;
-    }
-    
-    // If we don't know how big the file is (we've never done a single GET) or we haven't finished caching the
-    // entire file yet...
-    if (self.cacheItem.byteSize == 0 || ![self.cacheItem.cachedIndexes containsIndexesInRange: NSMakeRange(0, (NSUInteger) self.cacheItem.byteSize)]) {
-        // Then we need to start a download worker
-        self.currentOperation = [EBURLOperation new];
-        self.currentOperation.cacheItem = self.cacheItem;
-        self.currentOperation.URLString = self.cacheItem.remoteURL;
-        if (self.cacheItem.byteSize == 0) {
-            self.currentOperation.downloadRange = NSMakeRange(0, 0); // get entire file
-        } else {
-            self.currentOperation.downloadRange = [self nextDownloadRange];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.currentOperation != nil) {
+            // Don't interrupt an in-progress worker.
+            return;
         }
-        [self.currentOperation start];
-    }
+        
+        // If we don't know how big the file is (we've never done a single GET) or we haven't finished caching the
+        // entire file yet...
+        if (self.cacheItem.byteSize == 0 || ![self.cacheItem.cachedIndexes containsIndexesInRange: NSMakeRange(0, (NSUInteger) self.cacheItem.byteSize)]) {
+            // Then we need to start a download worker
+            if (self.cacheItem.byteSize > 0 && self.cacheItem.byteSize - _pos <= 0) {
+                // At EOF
+                return;
+            }
+            self.currentOperation = [EBURLOperation new];
+            self.currentOperation.cacheItem = self.cacheItem;
+            self.currentOperation.URLString = self.cacheItem.remoteURL;
+            if (self.cacheItem.byteSize == 0) {
+                self.currentOperation.downloadRange = NSMakeRange(0, 0); // get entire file
+            } else {
+                self.currentOperation.downloadRange = [self nextDownloadRange];
+            }
+            [self.currentOperation start];
+        }
+    });
+}
+
+- (uint64_t) length
+{
+    return self.cacheItem.byteSize;
 }
 
 - (BOOL) canFulfilReadRequest: (NSUInteger*) len
@@ -180,6 +196,7 @@
 {
     // In the absence of something more constructive to do here, we'll just start
     // a worker if we need one.
+    self.blockingQueue = dispatch_queue_create("com.sudeium.EBAudioKit.EBSeekableURLInputStreamBlockingThread", DISPATCH_QUEUE_SERIAL);
     [self startDownloadWorker];
 }
 
@@ -217,16 +234,25 @@
     // the data is actually available.
     
     [self startDownloadWorker];
-    NSUInteger safeLen = len; // safeLen should never overflow
-    self.blockingThread = [NSThread currentThread];
-    while (![self canFulfilReadRequest: &safeLen]) {
-        @autoreleasepool {
-            // Block for a while
-            usleep(100);
-            if (self.cancelRead) {
-                return 0;
+    __block NSUInteger safeLen = len; // safeLen should never overflow
+    __block BOOL readCancelled = NO;
+    _reading = YES;
+    dispatch_sync(self.blockingQueue, ^{
+        while (![self canFulfilReadRequest: &safeLen]) {
+            @autoreleasepool {
+                // Block for a while
+                usleep(100);
+                if (self.cancelRead) {
+                    readCancelled = YES;
+                    self.cancelRead = NO;
+                    break;
+                }
             }
         }
+    });
+    _reading = NO;
+    if (readCancelled) {
+        return 0;
     }
     
     const uint8_t* read = [self.cacheItem getBytesLength: safeLen fromOffset: _pos];
@@ -239,11 +265,15 @@
 
 - (void) seekToOffset:(NSUInteger)offset
 {
-    _pos = offset;
-    self.cancelRead = YES;
-    [self.currentOperation cancel];
-    self.currentOperation = nil;
-    [self startDownloadWorker];
+    if (_pos != offset) {
+        _pos = offset;
+        if (_reading) {
+            self.cancelRead = YES;
+        }
+        [self.currentOperation cancel];
+        self.currentOperation = nil;
+        [self startDownloadWorker];
+    }
 }
 
 #pragma mark - EBURLOperationDelegate

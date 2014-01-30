@@ -56,4 +56,30 @@
     return _audioDecoder;
 }
 
+- (CMTime) duration
+{
+    if (_audioDecoder == nil) {
+        return kCMTimeInvalid;
+    } else if (_audioDecoder.duration == UINT64_MAX) {
+        return kCMTimeIndefinite;
+    } else {
+        AudioStreamBasicDescription desc = _audioDecoder.audioDescription;
+        uint64_t lengthInFrames = _audioDecoder.duration;
+        return CMTimeMake(lengthInFrames, desc.mSampleRate);
+    }
+}
+
+- (CMTime) position
+{
+    if (_audioDecoder == nil) {
+        return kCMTimeInvalid;
+    } else if (CMTIME_IS_INDEFINITE(self.duration)) {
+        return kCMTimeInvalid;
+    } else {
+        AudioStreamBasicDescription desc = _audioDecoder.audioDescription;
+        int64_t positionInFrames = _audioDecoder.position;
+        return CMTimeMake(positionInFrames, desc.mSampleRate);
+    }
+}
+
 @end

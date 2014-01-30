@@ -25,14 +25,15 @@ static const int kAudioBufferLength = 230400;
     BOOL _waitingForConsumer;
     BOOL _stop;
     BOOL _channelIsPlaying;
+    BOOL _streamOpen;
     
     BOOL _atEndOfStream;
     BOOL _atEndOfAudioBuffer;
     
-    UInt64 _lengthInFrames;
+    SInt64 _lengthInFrames;
     SInt64 _playhead;
     
-    
+    int _currentOpusLink;
 }
 @property (nonatomic, assign) OggOpusFile *opusFile;
 @property (nonatomic, strong) NSArray *leftOvers;
@@ -107,22 +108,28 @@ static int decoder_close(void *stream)
 
 - (void) start
 {
-    [self.inputStream open];
-    _playhead = 0;
-    dispatch_async(_decodeQueue, ^{
-        NSMutableData *initialBytes = [NSMutableData dataWithCapacity: (NSUInteger)[[self class] initialBytes]];
-        NSInteger read = [self.inputStream read: initialBytes.mutableBytes maxLength: (NSUInteger)[[self class] initialBytes]];
-        _pos = read;
-        static const OpusFileCallbacks callbacks = { decoder_read, decoder_seek, decoder_tell, decoder_close };
-        int error = 0;
-        self.opusFile = op_open_callbacks((__bridge void *)(self), &callbacks, initialBytes.bytes, read, &error);
-        if (self.opusFile && error == 0) {
-            dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
-            _channelIsPlaying = YES;
-        } else {
-            // Can't play this
-        }
-    });
+    if (!_streamOpen) {
+        [self.inputStream open];
+        _streamOpen = YES;
+        _playhead = 0;
+        _currentOpusLink = -1;
+        dispatch_async(_decodeQueue, ^{
+            NSMutableData *initialBytes = [NSMutableData dataWithCapacity: (NSUInteger)[[self class] initialBytes]];
+            NSInteger read = [self.inputStream read: initialBytes.mutableBytes maxLength: (NSUInteger)[[self class] initialBytes]];
+            _pos = read;
+            static const OpusFileCallbacks callbacks = { decoder_read, decoder_seek, decoder_tell, decoder_close };
+            int error = 0;
+            self.opusFile = op_open_callbacks((__bridge void *)(self), &callbacks, initialBytes.bytes, read, &error);
+            if (self.opusFile && error == 0) {
+                dispatch_async_f(_decodeQueue, (__bridge void*) self, decode_cycle);
+                _channelIsPlaying = YES;
+            } else {
+                // Can't play this
+            }
+        });
+    } else {
+        _channelIsPlaying = YES;
+    }
 }
 
 static NSCountedSet* retainedDecoders = NULL;
@@ -151,6 +158,7 @@ static void decode_cycle(void *context)
     int32_t availableBytes = 0;
     TPCircularBufferHead(&(self->_circularBuffer), &availableBytes);
     AudioBufferList *bufList = nil;
+    int previousOpusLink = self->_currentOpusLink;
     if (availableBytes >= 23040) { // Do a quick sanity check before trying to allocate memory
         bufList = TPCircularBufferPrepareEmptyAudioBufferList(&(self->_circularBuffer), 1, 23040, NULL);
     }
@@ -158,6 +166,16 @@ static void decode_cycle(void *context)
         ogg_int64_t offset = op_pcm_tell(self.opusFile);
         int samplesRead = op_read_stereo(self.opusFile, bufList->mBuffers[0].mData, bufList->mBuffers[0].mDataByteSize / sizeof(opus_int16));
         if (samplesRead > 0) {
+            self->_currentOpusLink = op_current_link(self.opusFile);
+            if (self->_currentOpusLink != previousOpusLink || self->_lengthInFrames <= 0) {
+                // Get the duration, notify it has changed
+                self->_lengthInFrames = op_pcm_total(self.opusFile, -1);
+                if (self->_lengthInFrames > 0 && self.delegate) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self.delegate audioDecoderChangedDuration: self];
+                    });
+                }
+            }
             AudioTimeStamp ts;
             ts.mSampleTime = offset;
             TPCircularBufferCopyAudioBufferList(&(self->_circularBuffer), bufList, &ts, samplesRead, &self->_audioDescription);
@@ -193,6 +211,7 @@ static void decode_cycle(void *context)
 
 - (int) read: (unsigned char*) ptr maxLength:(NSUInteger)len
 {
+    printf("read request from: %lli len: %i\n", _pos, len);
     NSInteger read = [self.inputStream read: ptr maxLength: len];
     _pos += read;
     return (int) read;
@@ -200,12 +219,41 @@ static void decode_cycle(void *context)
 
 - (int) seekTo: (int64_t) offset relativeTo: (int) position
 {
-    return -1; // unimplemented
+    printf("seek request to: %lli whence: %i\n", offset, position);
+    if ([self.inputStream conformsToProtocol: @protocol(EBSeekableStream)]) {
+        NSInputStream<EBSeekableStream> *stream = (id) self.inputStream;
+        if (position == SEEK_SET) {
+            [stream seekToOffset: offset];
+            _pos = offset;
+        } else if (position == SEEK_CUR) {
+            [stream seekToOffset: _pos + offset];
+            _pos += offset;
+        } else if (position == SEEK_END) {
+            _pos = [stream length];
+            [stream seekToOffset: _pos];
+        }
+
+        return 0;
+    } else {
+        return -1;
+    }
+
+    return 0;
 }
 
 - (int64_t) currentPosition
 {
     return _pos;
+}
+
+- (int64_t) position
+{
+    return _playhead;
+}
+
+- (uint64_t) duration
+{
+    return (_lengthInFrames > 0 ? _lengthInFrames : 0);
 }
 
 - (BOOL) close

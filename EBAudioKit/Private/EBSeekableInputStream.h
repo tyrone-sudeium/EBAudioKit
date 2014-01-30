@@ -10,8 +10,9 @@
 
 @protocol EBSeekableStream <NSObject>
 @property (nonatomic, readonly) NSUInteger position;
+@property (nonatomic, readonly) uint64_t length;
 
-- (void) seekTo: (uint64_t) offset;
+- (void) seekToOffset: (uint64_t) offset;
 
 @end
 

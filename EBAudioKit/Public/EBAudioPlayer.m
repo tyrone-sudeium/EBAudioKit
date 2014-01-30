@@ -82,20 +82,26 @@
 - (void) prepareToPlay
 {
     if (!_preparedToPlay) {
-        [self skipTo: 0];
         _preparedToPlay = YES;
+        [self skipTo: 0];
     }
+}
+
+- (BOOL) isPlaying
+{
+    return [self.audioController running];
 }
 
 - (void) play
 {
     [self prepareToPlay];
     [self.audioController start: NULL];
+    [self informDelegateStatusChanged];
 }
 
 - (void) pause
 {
-    [self.audioController stop];
+    [self informDelegateStatusChanged];
 }
 
 - (void) stop
@@ -108,6 +114,7 @@
         self.currentItem.audioDecoder = nil;
         self.currentItem.inputStream = nil;
         _preparedToPlay = NO;
+        [self informDelegateStatusChanged];
     }
 }
 
@@ -147,18 +154,31 @@
         [self.audioController addChannels: @[ self.currentItem.audioDecoder ]];
         [self.currentItem.audioDecoder start];
         
-        if (previousItem) {
+        if (previousItem != nil && previousItem != self.currentItem) {
             [previousItem.audioDecoder close];
             [self.audioController removeChannels: @[ previousItem.audioDecoder ]];
             previousItem.audioDecoder = nil;
             previousItem.inputStream = nil;
         }
+        [self informDelegateStatusChanged];
     }
 }
 
 - (void) _positionTimerTick
 {
-    _previousPos = self.currentItem.position;
+    CMTime newPos = self.currentItem.position;
+    if (newPos.value != _previousPos.value && self.playing && self.delegate) {
+        [self.delegate audioPlayerPositionChanged: self];
+    }
+    _previousPos = newPos;
+    
+}
+
+- (void) informDelegateStatusChanged
+{
+    if (self.delegate) {
+        [self.delegate audioPlayerStatusChanged: self];
+    }
 }
 
 - (void) audioDecoderClosed:(EBAudioDecoder *)decoder
