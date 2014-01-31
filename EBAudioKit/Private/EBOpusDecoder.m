@@ -284,7 +284,11 @@ static void decode_cycle(void *context)
 static void notifyPlaybackStopped(AEAudioController *audioController, void *userInfo, int length)
 {
     // TODO: Memory management
-    EBOpusDecoder *self = (__bridge EBOpusDecoder*) userInfo;
+    // I have no idea what the ARC semantics of the below will do :(
+//    EBOpusDecoder * __strong *ptrToSelf = (EBOpusDecoder *__strong*)userInfo;
+//    EBOpusDecoder *self = *ptrToSelf;
+    
+    EBOpusDecoder* self = (__bridge id)*((void**)userInfo);
     self->_atEndOfAudioBuffer = YES;
     dispatch_async(dispatch_get_main_queue(), ^{
         [self checkIfAtEndOfFile];
