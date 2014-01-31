@@ -23,7 +23,7 @@ or AVFoundation. Required features for 1.0 include:
 - `[x]` HTTP and HTTPS streaming.
 - `[x]` Streaming .opus files and playing back Opus-encoded content.
 - `[ ]` Automatically switching to a local file if there is one.
-- `[ ]` Seeking.
+- `[x]` Seeking.
 - `[ ]` Player item queueing (like `AVQueuePlayer`, except not shit).
 - `[x]` Robust track caching, including partial cache.
 - `[ ]` Track caching must be manageable by the API consumer.
