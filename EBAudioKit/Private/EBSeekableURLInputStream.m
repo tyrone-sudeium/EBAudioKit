@@ -133,12 +133,36 @@
     }
     
     NSIndexSet *indices = self.cacheItem.cachedIndexes;
-    NSUInteger nextIndex = [indices indexGreaterThanIndex: _pos];
+    __block NSInteger firstGap = NSNotFound;
+    [indices enumerateRangesUsingBlock:^(NSRange range, BOOL *stop) {
+        if ((range.location + range.length) > _pos) {
+            firstGap = range.location + range.length;
+            *stop = YES;
+        }
+    }];
+    if (firstGap == NSNotFound) {
+        // Nothing is cached from _pos onward, get everything from _pos onward
+        return NSMakeRange(_pos, (NSInteger) self.cacheItem.byteSize - _pos);
+    } else if (firstGap >= self.cacheItem.byteSize) {
+        firstGap = NSNotFound;
+        // Everything from _pos onward is cached; find the first actual gap.
+        [indices enumerateRangesUsingBlock:^(NSRange range, BOOL *stop) {
+            firstGap = range.location + range.length;
+            *stop = YES;
+        }];
+        if (firstGap == NSNotFound) {
+            // Nothing at all is cached, get entire file
+            return NSMakeRange(0, 0);
+        }
+    }
+    
+    // Fetch all bytes to the end of the gap
+    NSUInteger nextIndex = [indices indexGreaterThanOrEqualToIndex: firstGap];
     if (nextIndex == NSNotFound) {
         // We need to get rest of the file, nothing else is cached
-        return NSMakeRange(_pos, (NSInteger) self.cacheItem.byteSize - _pos);
+        return NSMakeRange(firstGap, (NSInteger) self.cacheItem.byteSize - firstGap);
     } else {
-        return NSMakeRange(_pos, nextIndex - _pos);
+        return NSMakeRange(firstGap, nextIndex - firstGap);
     }
 }
 
@@ -166,6 +190,13 @@
             } else {
                 self.currentOperation.downloadRange = [self nextDownloadRange];
             }
+            __weak EBSeekableURLInputStream *wSelf = self;
+            self.currentOperation.completionBlock = ^{
+                if (![wSelf.currentOperation isCancelled]) {
+                    wSelf.currentOperation = nil;
+                    [wSelf startDownloadWorker];
+                }
+            };
             [self.currentOperation start];
         }
     });
