@@ -8,6 +8,6 @@
 
 #import <UIKit/UIKit.h>
 
-@interface SDViewController : UIViewController
+@interface SDViewController : UITableViewController
 
 @end

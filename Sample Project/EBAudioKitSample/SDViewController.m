@@ -10,12 +10,22 @@
 #import "EBAudioPlayerItem.h"
 #import "EBAudioPlayer.h"
 
+@interface TrackCell : UITableViewCell
+@property (nonatomic, strong) IBOutlet UITextField *textField;
+@end
+
+@implementation TrackCell
+
+@end
+
 @interface SDViewController () <UITextFieldDelegate, EBAudioPlayerDelegate>
 @property (strong, nonatomic) IBOutlet UIProgressView *progressView;
 @property (strong, nonatomic) IBOutlet UITextField *textField;
 @property (strong, nonatomic) IBOutlet UILabel *positionLabel;
 @property (strong, nonatomic) IBOutlet UILabel *durationLabel;
+@property (strong, nonatomic) IBOutlet UIButton *playPauseButton;
 @property (nonatomic, strong) EBAudioPlayer *player;
+@property (nonatomic, strong) NSMutableArray *tracks;
 @end
 
 @implementation SDViewController
@@ -25,33 +35,23 @@
     [super viewDidLoad];
     self.player = [[EBAudioPlayer alloc] init];
 	// Do any additional setup after loading the view, typically from a nib.
+    NSURL *url = [[NSBundle mainBundle] URLForResource: @"EBAudioKitSample" withExtension:@"opus"];
+    self.tracks = @[ url.absoluteString, @"https://eqbeats.org/track/5699/opus" ].mutableCopy;
     
-    self.textField.text = @"https://eqbeats.org/track/5699/opus";
     self.player.delegate = self;
+}
+
+- (void) viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self updateLabels];
+    [self updateProgress];
 }
 
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
-}
-
-- (IBAction)buttonAction:(id)sender
-{
-    NSURL *url = [[NSBundle mainBundle] URLForResource: @"EBAudioKitSample" withExtension:@"opus"];
-    self.player.playbackQueue = @[ [EBAudioPlayerItem playerItemWithURL: url] ];
-    [self.player play];
-}
-
-- (IBAction)remotePlayAction:(id)sender
-{
-    self.player.playbackQueue = @[ [EBAudioPlayerItem playerItemWithURL: [NSURL URLWithString:self.textField.text]] ];
-    [self.player play];
-}
-
-- (BOOL) textFieldShouldReturn:(UITextField *)textField
-{
-    return [textField resignFirstResponder];
 }
 
 - (void) updateLabels
@@ -75,6 +75,12 @@
     }
     self.durationLabel.text = durationText;
     self.positionLabel.text = elapsedText;
+    
+    if (self.player.playing) {
+        self.title = [NSString stringWithFormat: @"Playing %lu/%lu", (unsigned long)self.player.positionInQueue+1, (unsigned long)self.player.playbackQueue.count];
+    } else {
+        self.title = @"Not playing";
+    }
 }
 
 - (void) updateProgress
@@ -88,6 +94,30 @@
     }
 }
 
+- (IBAction)playPauseButtonAction:(id)sender
+{
+    NSMutableArray *tracks = [NSMutableArray arrayWithCapacity: self.tracks.count];
+    for (NSString *trackURL in self.tracks) {
+        [tracks addObject: [EBAudioPlayerItem playerItemWithURL: [NSURL URLWithString: trackURL]]];
+    }
+    self.player.playbackQueue = tracks;
+    [self.player play];
+}
+
+- (IBAction)stopButtonAction:(id)sender
+{
+    
+}
+
+- (IBAction)addButtonAction:(id)sender
+{
+    [self.tracks addObject: @""];
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow: self.tracks.count-1 inSection: 0];
+    [self.tableView insertRowsAtIndexPaths: @[indexPath] withRowAnimation: UITableViewRowAnimationAutomatic];
+    TrackCell *cell = (id)[self.tableView cellForRowAtIndexPath: indexPath];
+    [cell.textField becomeFirstResponder];
+}
+
 - (void) audioPlayerPositionChanged:(EBAudioPlayer *)player
 {
     [self updateLabels];
@@ -98,6 +128,44 @@
 {
     [self updateLabels];
     [self updateProgress];
+}
+
+- (NSInteger) numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (NSInteger) tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return self.tracks.count;
+}
+
+- (UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    TrackCell *trackCell = [tableView dequeueReusableCellWithIdentifier: @"TrackCell" forIndexPath: indexPath];
+    trackCell.textField.text = self.tracks[indexPath.row];
+    trackCell.textField.tag = indexPath.row;
+    trackCell.textField.delegate = self;
+    return trackCell;
+}
+
+- (BOOL) tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return YES;
+}
+
+- (void) tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        [self.tracks removeObjectAtIndex: indexPath.row];
+        [tableView deleteRowsAtIndexPaths: @[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    }
+}
+
+- (BOOL) textFieldShouldReturn:(UITextField *)textField
+{
+    [self.tracks replaceObjectAtIndex: textField.tag withObject: textField.text];
+    return [textField resignFirstResponder];
 }
 
 @end
