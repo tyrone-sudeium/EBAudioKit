@@ -211,7 +211,6 @@ static void decode_cycle(void *context)
 
 - (int) read: (unsigned char*) ptr maxLength:(NSUInteger)len
 {
-    printf("read request from: %lli len: %i\n", _pos, len);
     NSInteger read = [self.inputStream read: ptr maxLength: len];
     _pos += read;
     return (int) read;
@@ -219,7 +218,6 @@ static void decode_cycle(void *context)
 
 - (int) seekTo: (int64_t) offset relativeTo: (int) position
 {
-    printf("seek request to: %lli whence: %i\n", offset, position);
     if ([self.inputStream conformsToProtocol: @protocol(EBSeekableStream)]) {
         NSInputStream<EBSeekableStream> *stream = (id) self.inputStream;
         if (position == SEEK_SET) {
