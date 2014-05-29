@@ -1,6 +1,8 @@
 EBAudioKit
 ==========
 
+## Ugh, never mind. This is discontinued. Use [OrigamiEngine](https://github.com/ap4y/OrigamiEngine) instead.
+
 Building the next BandCamp? Prettier than Pandora? Sexier than Spotify? 
 Groovier than GrooveShark? You need EBAudioKit! EBAudioKit is a streaming, 
 caching, queueing, backgroundable, Opus-based audio player for iOS.
