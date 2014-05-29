@@ -14,6 +14,7 @@
 @protocol EBAudioDecoderDelegate <NSObject>
 - (void) audioDecoderClosed: (EBAudioDecoder*) decoder;
 - (void) audioDecoderChangedDuration: (EBAudioDecoder*) decoder;
+- (void) audioDecoderReachedEndOfStream: (EBAudioDecoder*) decoder;
 @end
 
 @interface EBAudioDecoder : NSObject <AEAudioPlayable>

@@ -17,7 +17,7 @@
 #import "opusfile.h"
 #import "opus.h"
 
-@interface EBAudioPlayer () <EBAudioDecoderDelegate> {
+@interface EBAudioPlayer () {
     BOOL _preparedToPlay;
     NSUInteger _positionInQueue;
     CMTime _previousPos;
@@ -179,12 +179,6 @@
     if (self.delegate) {
         [self.delegate audioPlayerStatusChanged: self];
     }
-}
-
-- (void) audioDecoderClosed:(EBAudioDecoder *)decoder
-{
-    // TODO: Gapless?
-    [self skipNext];
 }
 
 @end

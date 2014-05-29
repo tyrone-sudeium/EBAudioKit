@@ -99,7 +99,6 @@
 {
     NSRange range = NSMakeRange(self.downloadRange.location + _byteOffset, data.length);
     [self.cacheItem cacheData: data representingRangeInFile: range];
-    printf("caching range %s\n", NSStringFromRange(range).UTF8String);
     _byteOffset += data.length;
     [self.delegate URLOperationDidUpdateCache: self];
 }
@@ -176,10 +175,10 @@
         
         // If we don't know how big the file is (we've never done a single GET) or we haven't finished caching the
         // entire file yet...
-        if (self.cacheItem.byteSize == 0 || ![self.cacheItem.cachedIndexes containsIndexesInRange: NSMakeRange(0, (NSUInteger) self.cacheItem.byteSize)]) {
+        if (self.cacheItem.byteSize == 0 || ![self hasEntireFileCached]) {
             // Then we need to start a download worker
-            if (self.cacheItem.byteSize > 0 && self.cacheItem.byteSize - _pos <= 0) {
-                // At EOF
+            if ([self atEOF]) {
+                // At EOF: Nothing to be done
                 return;
             }
             self.currentOperation = [EBURLOperation new];
@@ -221,6 +220,20 @@
     } else {
         return NO;
     }
+}
+
+- (BOOL) atEOF
+{
+    if (self.cacheItem.byteSize > 0 && self.cacheItem.byteSize - _pos <= 0) {
+        return YES;
+    } else {
+        return NO;
+    }
+}
+
+- (BOOL) hasEntireFileCached
+{
+    return [self.cacheItem.cachedIndexes containsIndexesInRange: NSMakeRange(0, (NSUInteger) self.cacheItem.byteSize)];
 }
 
 - (void) open
@@ -315,19 +328,28 @@
     // Start another worker if there are still unfinished chunks left in the file
     self.currentOperation = nil;
     [self startDownloadWorker];
+    if ([self hasEntireFileCached]) {
+        // Inform delegate we've finished
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.delegate inputStreamDidFinishDownload: self];
+        });
+    }
 }
 
 - (void) URLOperationDidUpdateCache: (EBURLOperation*) operation
 {
-    // I don't think we actually need this!
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.delegate inputStreamDidChangeCacheStatus: self];
+    });
 }
 
 - (void) URLOperation: (EBURLOperation*) operation failedWithError: (NSError*) error
 {
     self.cancelRead = YES;
     NSLog(@"%@", error.localizedDescription);
-    
-    // TODO: Propagate the error
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.delegate inputStream: self didFailWithError: error];
+    });
 }
 
 @end

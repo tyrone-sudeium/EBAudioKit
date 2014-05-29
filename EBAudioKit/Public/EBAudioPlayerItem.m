@@ -11,9 +11,12 @@
 #import "EBAudioCache.h"
 #import "EBOpusDecoder.h"
 
-@interface EBAudioPlayerItem ()
+NSString * const EBAudioPlayerItemStatusChangedNotification = @"EBAudioPlayerItemStatusChangedNotification";
+
+@interface EBAudioPlayerItem () <EBSeekableURLInputStreamDelegate, EBAudioDecoderDelegate>
 @property (nonatomic, readwrite, strong) NSURL *URL;
 @property (nonatomic, readwrite, assign) CMTime duration;
+@property (nonatomic, readwrite, assign) CMTime position;
 @property (nonatomic, readwrite, assign) EBAudioPlayerItemStatus status;
 @property (nonatomic, strong) EBSeekableURLInputStream *inputStream;
 // TODO: Other decoders... and some way to switch between them
@@ -44,6 +47,7 @@
     if (_inputStream == nil) {
         _inputStream = [EBSeekableURLInputStream new];
         _inputStream.cacheItem = [[EBAudioCache defaultCache] cachedItemForKey: self.URL.absoluteString];
+        _inputStream.delegate = self;
     }
     return _inputStream;
 }
@@ -56,30 +60,82 @@
     return _audioDecoder;
 }
 
-- (CMTime) duration
+- (BOOL) playbackLikelyToKeepUp
+{
+    // This requires a relatively complex algorithm actually...
+    // Shortcuts for now.
+    if ([_inputStream atEOF] || [_inputStream hasEntireFileCached]) {
+        return YES;
+    }
+    
+    return YES;
+}
+
+- (NSIndexSet*) cachedRanges
+{
+    return self.inputStream.cacheItem.cachedIndexes;
+}
+
+- (void) _updateDuration
 {
     if (_audioDecoder == nil) {
-        return kCMTimeInvalid;
+        self.duration = kCMTimeInvalid;
     } else if (_audioDecoder.duration == UINT64_MAX) {
-        return kCMTimeIndefinite;
+        self.duration = kCMTimeIndefinite;
     } else {
         AudioStreamBasicDescription desc = _audioDecoder.audioDescription;
         uint64_t lengthInFrames = _audioDecoder.duration;
-        return CMTimeMake(lengthInFrames, desc.mSampleRate);
+        self.duration = CMTimeMake(lengthInFrames, desc.mSampleRate);
     }
 }
 
-- (CMTime) position
+- (void) _updatePosition
 {
     if (_audioDecoder == nil) {
-        return kCMTimeInvalid;
+        self.position = kCMTimeInvalid;
     } else if (CMTIME_IS_INDEFINITE(self.duration)) {
-        return kCMTimeInvalid;
+        self.position = kCMTimeInvalid;
     } else {
         AudioStreamBasicDescription desc = _audioDecoder.audioDescription;
         int64_t positionInFrames = _audioDecoder.position;
-        return CMTimeMake(positionInFrames, desc.mSampleRate);
+        self.position = CMTimeMake(positionInFrames, desc.mSampleRate);
     }
+}
+
+#pragma mark - Seekable Input Stream Delegate
+
+- (void) inputStreamDidFinishDownload:(EBSeekableURLInputStream *)stream
+{
+    // Update playback likely to keep up
+}
+
+- (void) inputStreamDidChangeCacheStatus:(EBSeekableURLInputStream *)stream
+{
+    // Propagate the update
+}
+
+- (void) inputStream:(EBSeekableURLInputStream *)stream didFailWithError:(NSError *)error
+{
+    // Errors suck
+    self.status = EBAudioPlayerItemStatusFailed;
+}
+
+#pragma mark - Audio Decoder Delegate
+
+- (void) audioDecoderChangedDuration:(EBAudioDecoder *)decoder
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName: EBAudioPlayerItemStatusChangedNotification object: self userInfo: nil];
+    [self _updateDuration];
+}
+
+- (void) audioDecoderClosed:(EBAudioDecoder *)decoder
+{
+    
+}
+
+- (void) audioDecoderReachedEndOfStream:(EBAudioDecoder *)decoder
+{
+    self.status = EBAudioPlayerItemStatusReadyToPlay;
 }
 
 @end

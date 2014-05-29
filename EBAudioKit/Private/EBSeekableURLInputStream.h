@@ -8,7 +8,13 @@
 
 #import "EBSeekableInputStream.h"
 
-@class EBAudioCachedItem;
+@class EBAudioCachedItem, EBSeekableURLInputStream;
+
+@protocol EBSeekableURLInputStreamDelegate <NSObject>
+- (void) inputStreamDidChangeCacheStatus: (EBSeekableURLInputStream*) stream;
+- (void) inputStreamDidFinishDownload: (EBSeekableURLInputStream*) stream;
+- (void) inputStream: (EBSeekableURLInputStream*) stream didFailWithError: (NSError*) error;
+@end
 
 @interface EBURLOperation : NSOperation
 @property (nonatomic, assign) NSRange downloadRange;
@@ -18,8 +24,11 @@
 
 @interface EBSeekableURLInputStream : EBSeekableInputStream
 @property (nonatomic, strong) EBAudioCachedItem *cacheItem;
+@property (nonatomic, weak) id<EBSeekableURLInputStreamDelegate> delegate;
 
 - (void) seekToOffset: (NSUInteger) offset;
 - (void) prepareToClose;
+- (BOOL) hasEntireFileCached;
+- (BOOL) atEOF;
 
 @end

@@ -49,12 +49,6 @@
     return NO;
 }
 
-- (uint64_t) writeIntoAudioBuffers: (AudioBufferList*) bufferList numberOfBytes: (NSUInteger) numBytes
-{
-    // Override in subclasses
-    return 0;
-}
-
 - (AEAudioControllerRenderCallback) renderCallback
 {
     return NULL;

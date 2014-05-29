@@ -7,7 +7,5 @@
 //
 
 #import <Foundation/Foundation.h>
-
-@interface EBAudioKit : NSObject
-
-@end
+#import "EBAudioPlayer.h"
+#import "EBAudioPlayerItem.h"

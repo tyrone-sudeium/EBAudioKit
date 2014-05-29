@@ -275,7 +275,7 @@ static void decode_cycle(void *context)
 - (void) checkIfAtEndOfFile
 {
     if (self.delegate && _atEndOfStream && _atEndOfAudioBuffer) {
-        [self.delegate audioDecoderClosed: self];
+        [self.delegate audioDecoderReachedEndOfStream: self];
     }
 }
 

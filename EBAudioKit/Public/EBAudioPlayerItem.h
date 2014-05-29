@@ -15,13 +15,20 @@ typedef NS_ENUM(NSInteger, EBAudioPlayerItemStatus) {
     EBAudioPlayerItemStatusFailed
 };
 
+extern NSString * const EBAudioPlayerItemStatusChangedNotification;
+
 @interface EBAudioPlayerItem : NSObject
 @property (nonatomic, readonly, strong) NSURL *URL;
 @property (nonatomic, readonly) CMTime duration;
 @property (nonatomic, readonly) EBAudioPlayerItemStatus status;
 @property (nonatomic, readonly) CMTime position;
+@property (nonatomic, readonly) BOOL playbackLikelyToKeepUp;
 
 + (instancetype) playerItemWithURL: (NSURL*) aURL;
 - (id) initWithURL: (NSURL*) aURL;
+
+// Returns the disparate set of bytes that have been cached
+// Useful for rendering a download graph
+- (NSIndexSet*) cachedRanges;
 
 @end
