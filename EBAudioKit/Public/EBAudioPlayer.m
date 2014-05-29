@@ -34,6 +34,9 @@
     if (self) {
         AudioStreamBasicDescription audioDescription;// = [AEAudioController interleaved16BitStereoAudioDescription];
         memset(&audioDescription, 0, sizeof(audioDescription));
+        
+        // TODO: Not every decoder will have this audio description...
+        // I need to work out the specifics of setting up an AE channel with a totally different audio desc.
         audioDescription.mFormatID          = kAudioFormatLinearPCM;
         audioDescription.mFormatFlags       = kLinearPCMFormatFlagIsSignedInteger;
         audioDescription.mChannelsPerFrame  = 2;
@@ -74,9 +77,15 @@
 {
     [self stop];
     _positionInQueue = 0;
+    for (EBAudioPlayerItem *oldItem in _playbackQueue) {
+        [[NSNotificationCenter defaultCenter] removeObserver: self name: EBAudioPlayerItemStatusChangedNotification object: oldItem];
+    }
     [self willChangeValueForKey: @"playbackQueue"];
     _playbackQueue = playbackQueue.copy;
     [self didChangeValueForKey: @"playbackQueue"];
+    for (EBAudioPlayerItem *newItem in _playbackQueue) {
+        [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector(_itemChanged:) name: EBAudioPlayerItemStatusChangedNotification object: newItem];
+    }
 }
 
 - (void) prepareToPlay
@@ -139,7 +148,7 @@
 
 - (void) seekTo: (CMTime) seekTime
 {
-    
+    [self.currentItem.inputStream seekToOffset: 0];
 }
 
 - (void) skipTo:(NSUInteger)index
@@ -172,6 +181,16 @@
     }
     _previousPos = newPos;
     
+}
+
+- (void) _itemChanged: (NSNotification*) notification
+{
+    EBAudioPlayerItem *item = notification.object;
+    if (item.status == EBAudioPlayerItemStatusReadyToPlay && CMTIME_COMPARE_INLINE(item.position, ==, item.duration)) {
+        // Reached the end of the track
+        [self skipNext];
+    }
+    [self.delegate audioPlayerStatusChanged: self];
 }
 
 - (void) informDelegateStatusChanged

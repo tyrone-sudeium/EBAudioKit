@@ -64,4 +64,9 @@
     return 0;
 }
 
+- (void) forceSeekTo:(CMTime)seekTime
+{
+    return 0;
+}
+
 @end

@@ -239,6 +239,11 @@ static void decode_cycle(void *context)
     return 0;
 }
 
+- (void) forceSeekTo:(CMTime)seekTime
+{
+    
+}
+
 - (int64_t) currentPosition
 {
     return _pos;

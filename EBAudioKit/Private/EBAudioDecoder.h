@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import <CoreMedia/CoreMedia.h>
 #import "TheAmazingAudioEngine.h"
 
 @class EBAudioDecoder;
@@ -33,5 +34,7 @@
 - (void) start;
 - (void) pause; // Stop filling the realtime audio buffer, but don't close or tear down anything
 - (BOOL) close;
+
+- (void) forceSeekTo: (CMTime) seekTime;
 
 @end
